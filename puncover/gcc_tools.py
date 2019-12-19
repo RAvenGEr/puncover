@@ -43,6 +43,6 @@ class GCCTools:
 
         lines_list =  [self.gcc_tool_lines('c++filt', c) for c in chunks(symbol_names)]
         lines = list(itertools.chain.from_iterable(lines_list))
-        demangled = list(s.rstrip() for s in lines)
+        demangled = list(s.decode("utf-8").rstrip() for s in lines)
 
         return dict(zip(symbol_names, demangled))

@@ -3,7 +3,7 @@ import fnmatch
 import os
 import re
 import sys
-from __builtin__ import any
+from builtins import any
 
 NAME = "name"
 DISPLAY_NAME = "display_name"
@@ -75,7 +75,7 @@ class Collector:
         self.symbols_by_name = None
 
     def qualified_symbol_name(self, symbol):
-        return os.path.join(symbol[PATH], symbol[NAME]) if symbol.has_key(BASE_FILE) else symbol[NAME]
+        return os.path.join(symbol[PATH], symbol[NAME]) if BASE_FILE in symbol else symbol[NAME]
 
     def symbol(self, name, qualified=True):
         self.build_symbol_name_index()
@@ -90,7 +90,7 @@ class Collector:
     def add_symbol(self, name, address, size=None, file=None, line=None, assembly_lines=None, type=None, stack_size=None):
         int_address = int(address, 16)
         sym = self.symbols.get(int_address, {})
-        if sym.has_key(NAME) and sym[NAME] != name:
+        if NAME in sym and sym[NAME] != name:
             # warning("Name for symbol at %s inconsistent (was '%s', now '%s')" % (address, sym[NAME], name))
             pass
         else:
@@ -122,6 +122,10 @@ class Collector:
 
     def parse_size_line(self, line):
         # print(line)
+        if not isinstance(line, str):
+            line = line.decode("utf-8")
+        line = line.rstrip()
+
         match = self.parse_size_line_re.match(line)
         if not match:
             return False
@@ -165,7 +169,10 @@ class Collector:
                 return 1
             return 0
 
-        for line in assembly.split("\n"):
+        for line in assembly:
+            if not isinstance(line, str):
+                line = line.decode("utf-8")
+            line = line.rstrip()
             match = self.parse_assembly_text_function_start_pattern.match(line)
             if match:
                 found_symbols += flush_current_symbol()
@@ -303,7 +310,7 @@ class Collector:
 
         print("parsing ELF at %s" % elf_file)
 
-        self.parse_assembly_text("".join(self.gcc_tools.get_assembly_lines(elf_file)))
+        self.parse_assembly_text(self.gcc_tools.get_assembly_lines(elf_file))
         for l in self.gcc_tools.get_size_lines(elf_file):
             self.parse_size_line(l)
 
@@ -350,7 +357,7 @@ class Collector:
 
     def enhance_assembly(self):
         for key, symbol in self.symbols.items():
-            if symbol.has_key(ASM):
+            if ASM in symbol:
                 symbol[ASM] = list([self.enhanced_assembly_line(l) for l in symbol[ASM]])
 
     def add_function_call(self, caller, callee):
@@ -434,13 +441,13 @@ class Collector:
 
     def enhance_function_size_from_assembly(self):
         for f in self.all_symbols():
-            if f.has_key(ASM):
+            if ASM in f:
                 f[SIZE] = sum([self.count_assembly_code_bytes(l) for l in f[ASM]])
 
     def enhance_sibling_symbols(self):
         for f in self.all_functions():
-            if f.has_key(SIZE):
-                addr = int(f.get(ADDRESS), 16) + f.get(SIZE)
+            if SIZE in f:
+                addr = int(f.get(ADDRESS), 16) + int(f.get(SIZE))
                 next_symbol = self.symbol_by_addr(hex(addr))
                 if next_symbol and next_symbol.get(TYPE, None) == TYPE_FUNCTION:
                     f[NEXT_FUNCTION] = next_symbol

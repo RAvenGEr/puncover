@@ -5,12 +5,12 @@ import os
 from distutils.spawn import find_executable
 from flask import Flask
 from os.path import dirname
-from collector import Collector
-from builders import ElfBuilder
-from middleware import BuilderMiddleware
-import renderers
-from gcc_tools import GCCTools
-from version import __version__
+from .collector import Collector
+from .builders import ElfBuilder
+from .middleware import BuilderMiddleware
+import puncover.renderers as renderers
+from .gcc_tools import GCCTools
+from .version import __version__
 
 def create_builder(gcc_base_filename, elf_file=None, su_dir=None, src_root=None):
     c = Collector(GCCTools(gcc_base_filename))
@@ -28,8 +28,7 @@ def find_arm_tools_location():
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        version=__version__,
+    parser = argparse.ArgumentParser(        
         description="Analyses C/C++ build output for code size, static variables, and stack usage.")
     parser.add_argument('--arm_tools_dir', dest='arm_tools_dir', default=find_arm_tools_location(),
                         help='DEPRECATED! location of your arm tools.')
@@ -46,7 +45,6 @@ def main():
     parser.add_argument('--port', dest='port', default=5000, type=int,
                         help='port the HTTP server runs on')
     args = parser.parse_args()
-
     if not args.gcc_tools_base:
         if args.arm_tools_dir:
             print('DEPRECATED: argument --arm_tools_dir will be removed, use --gcc_tools_base instead.')
